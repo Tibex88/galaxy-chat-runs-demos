@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{color-scheme:light}body{margin:0;font:14px system-ui,-apple-system,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Galaxy Chat Runs Demo</title>
+<style>.sitenav{max-width:780px;margin:0 auto;padding:14px 16px 0;display:flex;gap:16px;flex-wrap:wrap;font-size:14px}.sitenav a{color:var(--accent)}.sitenav a[aria-current]{color:var(--ink);font-weight:600;text-decoration:none}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a single chat thread column, a read-only drawer on the right for card details and the run pane. */
+:root {
+  --bg: #f5f5f2;
+  --panel: #ffffff;
+  --ink: #1c1d1a;
+  --muted: #676a62;
+  --line: #dedfd8;
+  --accent: #3b5bab;
+  --accent-soft: #e7ecf7;
+  --user: #ecede6;
+  --well: #f0f1ec;
+  --ok: #2d7a43; --ok-soft: #e2f2e6;
+  --bad: #b3322a; --bad-soft: #fae3e0;
+  --run: #3b5bab; --run-soft: #e7ecf7;
+  --off: #8b8e86; --off-soft: #ecece8;
+  --scrim: rgba(20, 22, 18, .35);
+  --f-body: "Instrument Sans", system-ui, -apple-system, sans-serif;
+  --f-mono: "Spline Sans Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #131412; --panel: #1b1c1a; --ink: #e7e8e2; --muted: #9c9f96; --line: #2f312d; --accent: #9db3ea; --accent-soft: #1f2840;
+  --user: #262823; --well: #222420; --ok: #7fd096; --ok-soft: #173020; --bad: #f2948b; --bad-soft: #3a1c19;
+  --run: #9db3ea; --run-soft: #1f2840; --off: #8a8d85; --off-soft: #262823; --scrim: rgba(0, 0, 0, .55); color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #131412; --panel: #1b1c1a; --ink: #e7e8e2; --muted: #9c9f96; --line: #2f312d; --accent: #9db3ea; --accent-soft: #1f2840;
+  --user: #262823; --well: #222420; --ok: #7fd096; --ok-soft: #173020; --bad: #f2948b; --bad-soft: #3a1c19;
+  --run: #9db3ea; --run-soft: #1f2840; --off: #8a8d85; --off-soft: #262823; --scrim: rgba(0, 0, 0, .55); color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 780px; margin: 0 auto; padding-inline: 16px; padding-block: 24px 40px; display: grid; gap: 18px; }
+header h1 { font-size: clamp(1.4rem, 3vw, 1.9rem); font-weight: 700; margin: 0 0 6px; line-height: 1.2; text-wrap: balance; }
+header p { margin: 0 0 6px; color: var(--muted); max-width: 68ch; }
+.tag { display: inline-block; font-family: var(--f-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); background: var(--accent-soft); padding: 3px 8px; border-radius: 4px; margin-bottom: 8px; }
+.mono { font-family: var(--f-mono); font-size: 12.5px; overflow-wrap: anywhere; }
+
+.thread { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; min-width: 0; }
+.thread-head { padding: 12px 16px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; gap: 10px; align-items: center; flex-wrap: wrap; }
+.thread-head strong { font-size: 15px; }
+.thread-head .mono { color: var(--muted); }
+.msgs { padding: 16px; display: flex; flex-direction: column; gap: 16px; min-height: 480px; }
+.msg { min-width: 0; display: grid; gap: 8px; }
+.msg.user { align-self: flex-end; max-width: 88%; }
+.msg.user .bubble { background: var(--user); padding: 9px 13px; border-radius: 10px; }
+.msg.assistant { align-self: stretch; }
+.msg.system { align-self: stretch; }
+.who { font-size: 11px; font-family: var(--f-mono); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+
+.files { display: flex; flex-wrap: wrap; gap: 6px; }
+.file { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; min-width: 0; }
+.file .fmt { font-family: var(--f-mono); font-size: 11px; color: var(--muted); }
+
+/* The proposal card */
+.card { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); display: grid; gap: 0; overflow: hidden; }
+.card .body { padding: 12px 14px; display: grid; gap: 10px; cursor: pointer; text-align: left; border: 0; background: transparent; color: inherit; font: inherit; width: 100%; }
+.card .body:hover { background: var(--well); }
+.card .top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.card .title { font-weight: 700; }
+.card .state { font-family: var(--f-mono); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.rows { display: grid; gap: 4px; margin: 0; }
+.rows div { display: grid; grid-template-columns: minmax(90px, 140px) minmax(0, 1fr); gap: 10px; font-size: 14px; }
+.rows dt { color: var(--muted); }
+.rows dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.defaults { font-size: 13px; color: var(--muted); }
+.unres { font-size: 13px; color: var(--bad); background: var(--bad-soft); border-radius: 6px; padding: 6px 10px; }
+.card .actions { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 14px; border-top: 1px solid var(--line); background: var(--well); align-items: center; }
+.card .actions .note { font-size: 12px; color: var(--muted); margin-left: auto; }
+.card.replaced { opacity: .6; }
+.card.replaced .title { text-decoration: line-through; }
+
+button { font: inherit; font-size: 14px; border-radius: 6px; padding: 6px 14px; cursor: pointer; border: 1px solid var(--line); background: var(--panel); color: var(--ink); }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--panel); font-weight: 600; }
+button[disabled] { opacity: .45; cursor: not-allowed; }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.qr { display: flex; flex-wrap: wrap; gap: 6px; }
+.qr button { border-radius: 999px; font-size: 13px; padding: 5px 12px; border-color: var(--accent); color: var(--accent); }
+.qr button[disabled] { border-color: var(--line); color: var(--muted); }
+
+/* Run part */
+.runcard { border: 1px solid var(--line); border-left: 4px solid var(--run); border-radius: 8px; padding: 10px 12px; display: grid; gap: 8px; background: var(--panel); cursor: pointer; text-align: left; font: inherit; color: inherit; width: 100%; }
+.runcard.completed { border-left-color: var(--ok); }
+.runcard.failed { border-left-color: var(--bad); }
+.runcard .top { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: baseline; }
+.badge { font-family: var(--f-mono); font-size: 11px; padding: 2px 8px; border-radius: 999px; text-transform: lowercase; }
+.badge.queued { background: var(--off-soft); color: var(--off); }
+.badge.running { background: var(--run-soft); color: var(--run); }
+.badge.completed { background: var(--ok-soft); color: var(--ok); }
+.badge.failed { background: var(--bad-soft); color: var(--bad); }
+.bar { height: 5px; border-radius: 3px; background: var(--well); overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; background: var(--run); transition: width .3s; }
+.err { font-family: var(--f-mono); font-size: 12px; background: var(--bad-soft); color: var(--bad); padding: 8px 10px; border-radius: 6px; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.composer { border-top: 1px solid var(--line); padding: 12px 16px; display: grid; gap: 10px; }
+.examples { display: grid; gap: 6px; }
+.examples .lbl { font-size: 11px; font-family: var(--f-mono); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.examples .list { display: flex; flex-wrap: wrap; gap: 6px; }
+.examples button { font-size: 13px; padding: 5px 10px; border-style: dashed; }
+.composer .box { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; color: var(--muted); font-size: 14px; background: var(--well); }
+
+.legend { font-size: 13px; color: var(--muted); display: grid; gap: 4px; }
+.legend b { color: var(--ink); font-weight: 600; }
+
+/* Drawer */
+.scrim { position: fixed; inset: 0; background: var(--scrim); }
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(460px, 100%); background: var(--panel); border-left: 1px solid var(--line); overflow-y: auto; padding: calc(16px + env(safe-area-inset-top, 0px)) 18px calc(24px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 16px; align-content: start; }
+.drawer h2 { font-size: 1.15rem; margin: 0; }
+.drawer h3 { font-size: 12px; font-family: var(--f-mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 6px; font-weight: 500; }
+.drawer .head { display: flex; justify-content: space-between; gap: 10px; align-items: start; }
+.drawer .path { color: var(--muted); }
+.settings { display: grid; gap: 2px; font-size: 14px; }
+.settings .sec { font-weight: 600; margin-top: 8px; }
+.settings .r { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; padding: 3px 0; border-bottom: 1px dashed var(--line); }
+.settings .r span:last-child { font-family: var(--f-mono); font-size: 12.5px; text-align: right; }
+.settings .d { color: var(--muted); }
+.flag { font-family: var(--f-mono); font-size: 11px; color: var(--bad); }
+.urlbox { font-family: var(--f-mono); font-size: 12px; background: var(--well); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; overflow-wrap: anywhere; }
+.kv { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 12px; font-size: 14px; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+</style>
+
+</head>
+<body>
+<nav class="sitenav"><a href="index.html">Overview</a><a href="spec.html" aria-current="page">Spec only</a><a href="proposed.html">Spec + proposed changes</a></nav>
+<div class="wrap">
+  <header>
+    <span class="tag">Demo · follows the "Galaxy Runs Through Chat" spec only</span>
+    <h1>Running Galaxy tools from a chat thread</h1>
+    <p>The assistant fills in what it can, asks only for required inputs it can't settle, and posts a card. The card has two buttons, Run and Open in Galaxy. There is no form in the app. Tap a card for its read-only details, or a run for its status.</p>
+    <div class="legend">
+      <span><b>Not in this version, so not shown:</b> the assistant does not reply when a run ends (ask it), runs started in Galaxy don't come back as cards, no live push (status is polled).</span>
+    </div>
+  </header>
+
+  <section class="thread" aria-label="Chat thread">
+    <div class="thread-head"><strong>RNA-seq, treated vs control</strong><span class="mono">thread t_galaxy · species: human</span></div>
+    <div class="msgs" id="msgs" aria-live="polite"></div>
+    <div class="composer">
+      <div class="examples"><span class="lbl">Example messages (demo only)</span><div class="list" id="examples"></div></div>
+      <div class="box">Message the assistant…</div>
+    </div>
+  </section>
+</div>
+
+<div id="overlay" hidden><div class="scrim" id="scrim"></div><aside class="drawer" id="drawer" aria-label="Details" role="dialog"></aside></div>
+
+<script>
+(function () {
+  const msgsEl = document.getElementById('msgs');
+  const examplesEl = document.getElementById('examples');
+  const overlay = document.getElementById('overlay');
+  const drawer = document.getElementById('drawer');
+  const GALAXY = 'https://galaxy.example.org';
+  const HISTORY = '1cd8e2f6b131e891';
+
+  const TOOLS = {
+    falco: { name: 'Falco', id: 'toolshed.g2.bx.psu.edu/repos/iuc/falco/falco/1.2.4+galaxy0', version: '1.2.4+galaxy0', jobs: 12 },
+    fastp: { name: 'fastp', id: 'toolshed.g2.bx.psu.edu/repos/iuc/fastp/fastp/1.3.7+galaxy0', version: '1.3.7+galaxy0', jobs: 6 },
+    star: { name: 'RNA STAR', id: 'toolshed.g2.bx.psu.edu/repos/iuc/rgrnastar/rna_star/2.7.11b+galaxy1', version: '2.7.11b+galaxy1', jobs: 6 },
+    fc: { name: 'featureCounts', id: 'toolshed.g2.bx.psu.edu/repos/iuc/featurecounts/featurecounts/2.1.1+galaxy1', version: '2.1.1+galaxy1', jobs: 6 },
+    deseq2: { name: 'DESeq2', id: 'toolshed.g2.bx.psu.edu/repos/iuc/deseq2/deseq2/2.11.40.8+galaxy4', version: '2.11.40.8+galaxy4', jobs: 1 }
+  };
+
+  let st, propN, runN, msgN;
+
+  // ---------- rendering helpers ----------
+  const el = h => { const d = document.createElement('div'); d.innerHTML = h.trim(); return d.firstElementChild; };
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  function message(role, build) {
+    const m = el(`<div class="msg ${role}"><div class="who">${role === 'user' ? 'You' : role === 'assistant' ? 'Assistant' : 'Run'}</div></div>`);
+    build(m);
+    msgsEl.appendChild(m);
+    m.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    return m;
+  }
+  function textPart(m, text, cls) { m.appendChild(el(`<div class="${cls || ''}">${text}</div>`)); }
+  function filesPart(m, files) {
+    m.appendChild(el(`<div class="files">${files.map(f => `<span class="file">${esc(f.name)} <span class="fmt">${esc(f.format)}</span></span>`).join('')}</div>`));
+  }
+  function quickReplies(m, replies) {
+    msgsEl.querySelectorAll('.qr button').forEach(b => b.disabled = true);
+    const q = el('<div class="qr"></div>');
+    replies.forEach(r => {
+      const b = el(`<button>${esc(r.label)}</button>`);
+      b.addEventListener('click', () => { msgsEl.querySelectorAll('.qr button').forEach(x => x.disabled = true); userSays(r.label); setTimeout(r.go, 400); });
+      q.appendChild(b);
+    });
+    m.appendChild(q);
+  }
+  function userSays(text, files) {
+    message('user', m => { const b = el(`<div class="bubble">${esc(text)}</div>`); m.appendChild(b); if (files) filesPart(m, files); });
+  }
+
+  // ---------- proposal cards ----------
+  function propose(opts) {
+    // opts: tool, title, summary, all_values, defaults_count, unresolved, replaces, text, quick
+    const card = Object.assign({ pid: 'prop_' + (++propN), runs: [], unresolved: [], not_carried: [], replacedBy: null }, opts);
+    st.cards.push(card);
+    if (card.replaces) card.replaces.replacedBy = card;
+    message('assistant', m => {
+      textPart(m, card.text);
+      card.el = el('<div class="card"></div>');
+      m.appendChild(card.el);
+      if (card.quick) quickReplies(m, card.quick);
+    });
+    refreshCards();
+    return card;
+  }
+  function runningSameTarget(card) {
+    return st.runs.some(r => r.tool === card.tool && (r.status === 'queued' || r.status === 'running'));
+  }
+  function renderCard(card) {
+    const replaced = !!card.replacedBy;
+    const busy = runningSameTarget(card);
+    const canRun = !replaced && !card.unresolved.length && !busy;
+    const t = TOOLS[card.tool];
+    let note = '';
+    if (replaced) note = 'Replaced';
+    else if (card.unresolved.length) note = 'Run is off until the inputs above are set';
+    else if (busy) note = `A ${t.name} run is still going in this thread`;
+    else if (card.runs.length) note = `Ran ${card.runs.length} time${card.runs.length > 1 ? 's' : ''}`;
+    card.el.className = 'card' + (replaced ? ' replaced' : '');
+    card.el.innerHTML = `
+      <button class="body" aria-label="Open details for ${esc(card.title)}">
+        <div class="top"><span class="title">${esc(card.title)}</span><span class="state">${replaced ? 'replaced' : card.pid}</span></div>
+        <dl class="rows">${card.summary.map(r => `<div><dt>${esc(r[0])}</dt><dd>${esc(r[1])}</dd></div>`).join('')}</dl>
+        ${card.unresolved.length ? `<div class="unres">Not set: ${card.unresolved.map(esc).join('; ')}</div>` : ''}
+        <div class="defaults">Every setting · ${card.defaults_count} at Galaxy defaults</div>
+      </button>
+      <div class="actions">
+        <button class="primary" data-a="run" ${canRun ? '' : 'disabled'}>Run</button>
+        <button data-a="open" ${replaced ? 'disabled' : ''}>Open in Galaxy</button>
+        <span class="note">${note}</span>
+      </div>`;
+    card.el.querySelector('.body').addEventListener('click', () => showDetails(card));
+    card.el.querySelector('[data-a=run]').addEventListener('click', () => pressRun(card));
+    card.el.querySelector('[data-a=open]').addEventListener('click', () => openInGalaxy(card));
+  }
+  function refreshCards() { st.cards.forEach(renderCard); }
+
+  // ---------- runs ----------
+  function pressRun(card) {
+    if (card.replacedBy || card.unresolved.length || runningSameTarget(card)) return;
+    const t = TOOLS[card.tool];
+    const run = { id: 'run_' + (++runN), card, tool: card.tool, status: 'queued', galaxy_state: 'new', done: 0, total: t.jobs, outputs: [], error: null, created: new Date() };
+    st.runs.push(run);
+    card.runs.push(run);
+    message('system', m => {
+      run.el = el('<button class="runcard"></button>');
+      run.el.addEventListener('click', () => showRun(run));
+      m.appendChild(run.el);
+      run.filesEl = el('<div class="files"></div>');
+      m.appendChild(run.filesEl);
+    });
+    renderRun(run);
+    refreshCards();
+    simulate(run);
+  }
+  function renderRun(run) {
+    const t = TOOLS[run.tool];
+    run.el.className = 'runcard ' + run.status;
+    run.el.innerHTML = `
+      <div class="top"><span><strong>${esc(t.name)}</strong> <span class="mono" style="color:var(--muted)">${run.id} · from ${run.card.pid}</span></span><span class="badge ${run.status}">${run.status}</span></div>
+      ${run.status === 'failed' ? `<div class="err">${esc(run.error.message)}</div>` :
+        `<div class="bar"><i style="width:${run.done / run.total * 100}%"></i></div><div class="mono" style="color:var(--muted)">${run.done} of ${run.total} job${run.total > 1 ? 's' : ''} done</div>`}`;
+    run.filesEl.innerHTML = run.outputs.map(f => `<span class="file">${esc(f.name)} <span class="fmt">${esc(f.format)}</span></span>`).join('');
+  }
+  // Stands in for polling GET /v1/galaxy/runs?thread_id= while a run is queued or running.
+  function simulate(run) {
+    const t = TOOLS[run.tool];
+    const fail = run.tool === 'star' && !st.starFixed;
+    setTimeout(() => {
+      run.status = 'running'; run.galaxy_state = 'running'; renderRun(run); refreshCards();
+      const tick = setInterval(() => {
+        if (fail && run.done === 3) {
+          clearInterval(tick);
+          run.status = 'failed'; run.galaxy_state = 'error';
+          run.error = { step: null, message: 'EXITING because of fatal ERROR: not enough memory for BAM sorting:\nSOLUTION: re-run STAR with at least --limitBAMsortRAM 10000000000' };
+          st.starFailed = true;
+          renderRun(run); refreshCards(); renderExamples();
+          return;
+        }
+        run.done++;
+        run.outputs.push(...outputsFor(run.tool, run.done));
+        if (run.done >= run.total) {
+          clearInterval(tick);
+          run.status = 'completed'; run.galaxy_state = 'ok';
+          st.done[run.tool] = true;
+          refreshCards(); renderExamples();
+        }
+        renderRun(run);
+      }, 700);
+    }, 900);
+  }
+  function outputsFor(tool, k) {
+    const s = 'S' + Math.ceil(k / (tool === 'falco' ? 2 : 1));
+    const r = tool === 'falco' ? (k % 2 ? '_R1' : '_R2') : '';
+    switch (tool) {
+      case 'falco': return [{ name: `Falco on ${s}${r}: report`, format: 'html' }];
+      case 'fastp': return [{ name: `fastp on ${s}: reads (paired)`, format: 'fastqsanger.gz' }, { name: `fastp on ${s}: report`, format: 'html' }];
+      case 'star': return [{ name: `RNA STAR on ${s}: mapped.bam`, format: 'bam' }];
+      case 'fc': return [{ name: `featureCounts on ${s}: counts`, format: 'tabular' }];
+      default: return [];
+    }
+  }
+
+  // ---------- drawer: details and run pane ----------
+  function openDrawer(html) { drawer.innerHTML = html; overlay.hidden = false; drawer.querySelector('[data-close]').focus(); drawer.querySelector('[data-close]').addEventListener('click', closeDrawer); }
+  function closeDrawer() { overlay.hidden = true; }
+  document.getElementById('scrim').addEventListener('click', closeDrawer);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+
+  function showDetails(card) {
+    const t = TOOLS[card.tool];
+    let sec = '';
+    const settings = card.all_values.map(v => {
+      const head = v.section !== sec ? `<div class="sec">${esc(v.section)}</div>` : '';
+      sec = v.section;
+      const val = v.notCarried ? '<span class="flag">Set in Galaxy</span>' : esc(v.value);
+      return `${head}<div class="r ${v.default ? 'd' : ''}"><span>${esc(v.label)}${v.default ? ' · default' : ''}</span><span>${val}</span></div>`;
+    }).join('');
+    openDrawer(`
+      <div class="head"><div><h2>${esc(card.title)}</h2><div class="mono path">/threads/t_galaxy/galaxy/proposal/${card.pid}</div></div><button data-close>Close</button></div>
+      <div><h3>Target</h3><dl class="kv"><dt>Tool</dt><dd>${esc(t.name)}</dd><dt>Id</dt><dd class="mono">${esc(t.id)}</dd><dt>Version</dt><dd class="mono">${esc(t.version)}</dd></dl></div>
+      <div><h3>What the chat set</h3><dl class="kv">${card.summary.map(r => `<dt>${esc(r[0])}</dt><dd>${esc(r[1])}</dd>`).join('')}</dl></div>
+      <div><h3>Every setting · ${card.defaults_count} at Galaxy defaults</h3><div class="settings">${settings}</div><p class="defaults">Showing a sample of the settings in this demo.</p></div>
+      <div><h3>Runs from this card</h3>${card.runs.length ? card.runs.map(r => `<div class="mono">${r.id} · ${r.status}</div>`).join('') : '<div class="defaults">None yet.</div>'}</div>
+      ${card.replacedBy ? `<div class="defaults">Replaced by ${card.replacedBy.pid}. Only the newest card in a chain can run.</div>` : ''}`);
+  }
+
+  function showRun(run) {
+    const t = TOOLS[run.tool];
+    openDrawer(`
+      <div class="head"><div><h2>${esc(t.name)} run</h2><div class="mono path">${run.id}</div></div><button data-close>Close</button></div>
+      <dl class="kv">
+        <dt>Status</dt><dd><span class="badge ${run.status}">${run.status}</span></dd>
+        <dt>Galaxy state</dt><dd class="mono">${run.galaxy_state}</dd>
+        <dt>Progress</dt><dd>${run.done} of ${run.total} jobs</dd>
+        <dt>Started from</dt><dd class="mono">${run.card.pid}</dd>
+        <dt>History</dt><dd class="mono">${HISTORY}</dd>
+      </dl>
+      ${run.error ? `<div><h3>Error</h3><div class="err">${esc(run.error.message)}</div></div>` : ''}
+      <div><h3>Outputs</h3>${run.outputs.length ? `<div class="files">${run.outputs.map(f => `<span class="file">${esc(f.name)} <span class="fmt">${esc(f.format)}</span></span>`).join('')}</div>` : '<div class="defaults">None yet. They appear as jobs finish.</div>'}</div>
+      <p class="defaults">The pane re-reads the run every 5 s at first, every 15 s after 2 minutes and every 60 s after 30 minutes.</p>`);
+  }
+
+  function openInGalaxy(card) {
+    const t = TOOLS[card.tool];
+    const ran = card.runs.length > 0;
+    const kind = ran ? 'rerun' : 'tool_form';
+    const url = ran ? `${GALAXY}/?job_id=bbd44e69cb8906b5` :
+      `${GALAXY}/?tool_id=${encodeURIComponent(t.id)}&version=${encodeURIComponent(t.version)}&history_id=${HISTORY}` +
+      Object.entries(card.link || {}).map(([k, v]) => `&${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('');
+    openDrawer(`
+      <div class="head"><div><h2>Open in Galaxy</h2><div class="mono path">${card.pid} · ${kind}</div></div><button data-close>Close</button></div>
+      <p>${ran ? "Opens Galaxy's \"run again\" form for this card's latest job, with every value filled in." : "Opens Galaxy's own " + esc(t.name) + ' form with the values from this card filled in.'} In the app this opens in a new tab.</p>
+      <div><h3>Link</h3><div class="urlbox">${esc(url)}</div></div>
+      <div><h3>Not carried by the link</h3>${!ran && card.not_carried.length ? card.not_carried.map(n => `<div>${esc(n)} · <span class="flag">Set in Galaxy</span></div>`).join('') : '<div class="defaults">Nothing. Every value is in the link.</div>'}</div>
+      <p class="defaults">A run started in Galaxy writes to this thread's history, but it does not come back as a run card in this version.</p>`);
+  }
+
+  // ---------- conversation steps ----------
+  const READS = '6 pairs as one collection (12 files)';
+  const ex = {
+    didFalco: { label: 'Did Falco finish?', go: () => statusAnswer('falco') },
+    trim: { label: 'Trim the adapters', go: proposeFastp },
+    align: { label: 'Align them to the genome', go: proposeStar },
+    whyStar: { label: 'Why did STAR fail?', go: explainStar },
+    count: { label: 'Count reads per gene', go: proposeFc },
+    compare: { label: 'Compare treated and control', go: proposeDeseq }
+  };
+
+  function renderExamples() {
+    const list = [];
+    if (st.runs.some(r => r.tool === 'falco') && !st.asked.didFalco) list.push(ex.didFalco);
+    if (!st.asked.trim) list.push(ex.trim);
+    if (st.done.fastp && !st.asked.align) list.push(ex.align);
+    if (st.starFailed && !st.asked.whyStar) list.push(ex.whyStar);
+    if (st.done.star && !st.asked.count) list.push(ex.count);
+    if (st.done.fc && !st.asked.compare) list.push(ex.compare);
+    examplesEl.innerHTML = '';
+    if (!list.length) { examplesEl.appendChild(el('<span class="defaults">Run the latest card to continue.</span>')); return; }
+    list.forEach(x => {
+      const key = Object.keys(ex).find(k => ex[k] === x);
+      const b = el(`<button>${esc(x.label)}</button>`);
+      b.addEventListener('click', () => { st.asked[key] = true; renderExamples(); userSays(x.label); setTimeout(x.go, 500); });
+      examplesEl.appendChild(b);
+    });
+  }
+
+  function statusAnswer(tool) {
+    const run = st.runs.filter(r => r.tool === tool).pop();
+    const t = TOOLS[tool];
+    let text;
+    if (!run) text = `There is no ${t.name} run in this thread.`;
+    else if (run.status === 'completed') text = `Yes. ${t.name} finished, and its ${run.outputs.length} reports are in this thread.`;
+    else if (run.status === 'failed') text = `No, it failed: ${run.error.message.split('\n')[0]}`;
+    else text = `Not yet. ${t.name} is ${run.status}: ${run.done} of ${run.total} jobs done.`;
+    message('assistant', m => textPart(m, esc(text)));
+  }
+
+  function proposeFalco() {
+    propose({
+      tool: 'falco', title: 'Falco · check read quality',
+      text: 'Here is Falco on all your reads.',
+      summary: [['Reads', READS]],
+      all_values: [
+        { section: 'Input', label: 'Reads', value: 'reads (list:paired)' },
+        { section: 'Options', label: 'Contaminants file', value: 'built-in', default: true },
+        { section: 'Options', label: 'Adapters file', value: 'built-in', default: true },
+        { section: 'Options', label: 'Minimum read length', value: '0', default: true } ],
+      defaults_count: 9, link: { 'input_file': 'hdca:5a1c0e2b7f3d9e61' }, not_carried: ['Reads (a collection)'],
+      quick: [{ label: 'Run it', go: () => pressRun(st.cards[st.cards.length - 1]) }]
+    });
+  }
+  function proposeFastp() {
+    const c = propose({
+      tool: 'fastp', title: 'fastp · trim reads',
+      text: 'Here is fastp on your paired reads. It finds adapters on its own.',
+      summary: [['Reads', READS + ', paired'], ['Adapters', 'detect automatically']],
+      all_values: [
+        { section: 'Input', label: 'Single-end or paired reads', value: 'paired_collection' },
+        { section: 'Input', label: 'Reads', value: 'reads (list:paired)' },
+        { section: 'Adapter trimming', label: 'Detect adapters for paired reads', value: 'yes' },
+        { section: 'Filter options', label: 'Quality cut-off', value: '15', default: true },
+        { section: 'Filter options', label: 'Length required', value: '15', default: true } ],
+      defaults_count: 38, link: { 'single_paired|single_paired_selector': 'paired_collection', 'single_paired|paired_input': 'hdca:5a1c0e2b7f3d9e61' }, not_carried: ['Reads (a collection)'],
+      quick: [
+        { label: 'Run it', go: () => pressRun(c) },
+        { label: 'Also drop reads below quality 20', go: () => proposeFastpQ20(c) } ]
+    });
+  }
+  function proposeFastpQ20(prev) {
+    const c = propose({
+      tool: 'fastp', title: 'fastp · trim reads', replaces: prev,
+      text: 'Here is fastp with a quality cut-off of 20.',
+      summary: [['Reads', READS + ', paired'], ['Adapters', 'detect automatically'], ['Quality cut-off', '20']],
+      all_values: [
+        { section: 'Input', label: 'Single-end or paired reads', value: 'paired_collection' },
+        { section: 'Input', label: 'Reads', value: 'reads (list:paired)' },
+        { section: 'Adapter trimming', label: 'Detect adapters for paired reads', value: 'yes' },
+        { section: 'Filter options', label: 'Quality cut-off', value: '20' },
+        { section: 'Filter options', label: 'Length required', value: '15', default: true } ],
+      defaults_count: 37, link: { 'single_paired|single_paired_selector': 'paired_collection', 'single_paired|paired_input': 'hdca:5a1c0e2b7f3d9e61', 'filter_options|quality_filtering_options|qualified_quality_phred': '20' }, not_carried: ['Reads (a collection)'],
+      quick: [{ label: 'Run it', go: () => pressRun(c) }]
+    });
+  }
+  function starCard(prev) {
+    const fixed = !!prev;
+    const c = propose({
+      tool: 'star', title: 'RNA STAR · align reads', replaces: prev || null,
+      text: fixed ? 'Here is RNA STAR again with a 10 GB memory limit for sorting.' : "Here is RNA STAR on the trimmed reads. I used the thread's species, human, for the genome.",
+      summary: [['Reads', 'fastp output, 6 pairs'], ['Genome', 'Human hg38 (built-in index)'], ['Gene model', 'GENCODE v44 (built-in)']].concat(fixed ? [['BAM sort memory', '10 GB']] : []),
+      all_values: [
+        { section: 'Input', label: 'Single-end or paired reads', value: 'paired_collection' },
+        { section: 'Reference genome', label: 'Source', value: 'built-in index' },
+        { section: 'Reference genome', label: 'Genome', value: 'hg38' },
+        { section: 'Reference genome', label: 'Gene model', value: 'GENCODE v44' },
+        { section: 'Other parameters', label: 'Limit BAM sort RAM', value: fixed ? '10000000000' : '0', default: !fixed },
+        { section: 'Output filter', label: 'Max multiple alignments', value: '10', default: true } ],
+      defaults_count: fixed ? 52 : 53, link: { 'singlePaired|sPaired': 'paired_collection', 'refGenomeSource|geneSource': 'indexed', 'refGenomeSource|GTFconditional|genomeDir': 'hg38_gencode_v44' }, not_carried: ['Reads (a collection)'],
+      quick: [{ label: 'Run it', go: () => pressRun(c) }]
+    });
+    if (fixed) st.starFixed = true;
+  }
+  function proposeStar() { starCard(null); }
+  function explainStar() {
+    const failed = st.cards.filter(c => c.tool === 'star').pop();
+    message('assistant', m => textPart(m, "STAR ran out of memory while sorting the alignments. The job's error says it needs at least 10 GB for that step."));
+    setTimeout(() => starCard(failed), 500);
+  }
+  function proposeFc() {
+    const c = propose({
+      tool: 'fc', title: 'featureCounts · count reads per gene',
+      text: 'Here is featureCounts on the STAR alignments, with the same human gene model.',
+      summary: [['Alignments', 'RNA STAR output, 6 BAM files'], ['Gene annotation', 'GENCODE v44 (built-in)']],
+      all_values: [
+        { section: 'Input', label: 'Alignment file', value: 'mapped.bam (6)' },
+        { section: 'Input', label: 'Gene annotation', value: 'built-in: GENCODE v44' },
+        { section: 'Options', label: 'Strand specificity', value: 'unstranded', default: true },
+        { section: 'Options', label: 'Count fragments, not reads', value: 'no', default: true } ],
+      defaults_count: 31, link: { 'anno|anno_select': 'builtin', 'anno|select_built_in': 'hg38_gencode_v44' }, not_carried: ['Alignment file (6 files in one input)'],
+      quick: [{ label: 'Run it', go: () => pressRun(c) }]
+    });
+  }
+  function proposeDeseq() {
+    propose({
+      tool: 'deseq2', title: 'DESeq2 · compare groups',
+      text: 'DESeq2 needs its groups set as a repeated factor, one block per group. That is more than I can set up in chat, so here is a card with what I could fill. Use Open in Galaxy to set the groups there.',
+      summary: [['Counts', 'featureCounts output, 6 files']],
+      unresolved: ['Factor name and its levels (which samples are treated, which are control)'],
+      all_values: [
+        { section: 'Input', label: 'How to provide the files', value: 'datasets per level' },
+        { section: 'Factor', label: 'Factor name', value: '', notCarried: true },
+        { section: 'Factor', label: 'Level 1 and its count files', value: '', notCarried: true },
+        { section: 'Factor', label: 'Level 2 and its count files', value: '', notCarried: true },
+        { section: 'Output options', label: 'Output normalised counts', value: 'no', default: true } ],
+      defaults_count: 24, link: {}, not_carried: ['Factor and its levels (a repeat)', 'Count files per level (several files in one input)']
+    });
+  }
+
+  function start() {
+    st = { cards: [], runs: [], done: {}, asked: {}, starFailed: false, starFixed: false };
+    propN = 6; runN = 30; msgN = 0;
+    msgsEl.innerHTML = '';
+    closeDrawer();
+    const files = [];
+    for (let i = 1; i <= 6; i++) files.push({ name: `S${i}_R1.fq.gz`, format: 'fastqsanger.gz' }, { name: `S${i}_R2.fq.gz`, format: 'fastqsanger.gz' });
+    userSays('Here are my RNA-seq reads, S1–S3 treated and S4–S6 control. Check their quality first.', files);
+    setTimeout(proposeFalco, 400);
+    renderExamples();
+  }
+
+  start();
+})();
+</script>
+
+</body>
+</html>

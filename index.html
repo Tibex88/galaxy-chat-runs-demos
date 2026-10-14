@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Galaxy Chat Runs Demos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;600;700&family=Spline+Sans+Mono:wght@400&display=swap">
+<style>
+:root { --bg: #f5f5f2; --panel: #ffffff; --ink: #1c1d1a; --muted: #676a62; --line: #dedfd8; --accent: #3b5bab; --accent-soft: #e7ecf7; color-scheme: light; }
+@media (prefers-color-scheme: dark) { :root { --bg: #131412; --panel: #1b1c1a; --ink: #e7e8e2; --muted: #9c9f96; --line: #2f312d; --accent: #9db3ea; --accent-soft: #1f2840; color-scheme: dark; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 "Instrument Sans", system-ui, -apple-system, sans-serif; }
+main { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 40px 56px; display: grid; gap: 22px; }
+h1 { font-size: clamp(1.6rem, 4vw, 2.2rem); line-height: 1.15; margin: 0; text-wrap: balance; }
+p { margin: 0; max-width: 64ch; }
+.muted { color: var(--muted); }
+.tag { font-family: "Spline Sans Mono", ui-monospace, monospace; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); background: var(--accent-soft); padding: 3px 8px; border-radius: 4px; justify-self: start; }
+.pages { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+a.page { display: grid; gap: 6px; padding: 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; color: inherit; text-decoration: none; }
+a.page:hover, a.page:focus-visible { border-color: var(--accent); outline: none; }
+a.page strong { font-size: 1.05rem; color: var(--accent); }
+ul { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+</style>
+</head>
+<body>
+<main>
+  <span class="tag">Mock-ups · example data</span>
+  <h1>Running Galaxy tools from a chat thread</h1>
+  <p class="muted">Two clickable mock-ups of the same RNA-seq thread, to compare the current "Galaxy Runs Through Chat" spec with the changes we propose. Nothing here talks to a real Galaxy; all results are examples.</p>
+
+  <div class="pages">
+    <a class="page" href="spec.html">
+      <strong>Spec only</strong>
+      <span>Proposal cards with Run and Open in Galaxy, replaced cards, run status and read-only details. The user has to ask for every next step.</span>
+    </a>
+    <a class="page" href="proposed.html">
+      <strong>Spec + proposed changes</strong>
+      <span>Opens on a recorded run played through to the end. Each change is tagged "proposed" with its number.</span>
+    </a>
+  </div>
+
+  <div>
+    <p><strong>Proposed changes</strong></p>
+    <ul>
+      <li>Uploaded files are grouped into one collection.</li>
+      <li>A plan at the start, built from an installed workflow.</li>
+      <li>A "Next step" button when a run completes.</li>
+      <li>"Run it" does the same as the Run button.</li>
+      <li>A run's outputs are shown as one collection.</li>
+      <li>The assistant can preview outputs and say what they show.</li>
+      <li>Repeated blocks, such as DESeq2's groups, are filled from the chat.</li>
+    </ul>
+  </div>
+</main>
+</body>
+</html>
